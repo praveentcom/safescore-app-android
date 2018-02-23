@@ -1,6 +1,8 @@
 package io.praveen.safescore;
 
 import android.annotation.SuppressLint;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -12,6 +14,7 @@ import android.os.BatteryManager;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -82,51 +85,61 @@ public class MainActivity extends AppCompatActivity {
         ontime = findViewById(R.id.main_ontime);
         if (mTime > in && mTime < out){
             ontime.setText("YOU'RE ON TIME");
-            Score += 8;
+            Score += 10;
             ontime.setTextColor(getResources().getColor(R.color.colorGreen));
         } else{
             if (mDist > 5){
-                Score += 4;
+                Score += 5;
                 ontime.setText("NO, PLEASE START TO HOME");
                 ontime.setTypeface(null, Typeface.BOLD);
                 ontime.setTextColor(getResources().getColor(R.color.colorAccent));
             } else{
-                Score += 10;
+                Score += 20;
                 ontime.setText("YES, YOU ARE ON TIME");
                 ontime.setTextColor(getResources().getColor(R.color.colorGreen));
             }
         }
-        new Json().execute("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+lat1+","+lon1+"&radius=5000&type=police&key=AIzaSyCczblqj3aNVsRde-4oin7FnGmyfMpEx3c");
+        new Json().execute("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+lat1+","+lon1+"&radius=2000&type=police&key=AIzaSyCczblqj3aNVsRde-4oin7FnGmyfMpEx3c");
         threat = findViewById(R.id.main_threat);
-        new Json2().execute("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+lat1+","+lon1+"&radius=5000&type=liquor_store&key=AIzaSyCczblqj3aNVsRde-4oin7FnGmyfMpEx3c");
+        new Json2().execute("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+lat1+","+lon1+"&radius=2000&type=liquor_store&key=AIzaSyCczblqj3aNVsRde-4oin7FnGmyfMpEx3c");
         behaviour = findViewById(R.id.main_behaviour);
         behaviour.setText("NONE");
-        Score += 10;
+        behaviour.setTextColor(getResources().getColor(R.color.colorGreen));
+        Score += 20;
         if (mDist > 5) {
             away.setText("AWAY FROM HOME BY " + mDist + " KMs");
             away.setTypeface(null, Typeface.BOLD);
-        } else{
+        } else if (mDist > 0.5){
             away.setText("AWAY FROM HOME BY " + mDist + " KMs");
+            away.setTextColor(getResources().getColor(R.color.colorGreen));
+        } else{
+            away.setText("SWEET, YOU ARE NEAR YOUR HOME!");
             away.setTextColor(getResources().getColor(R.color.colorGreen));
         }
         name.setText("Welcome " + mUser.getDisplayName() +",\nYour SafeScore is");
-        BatteryManager bm = (BatteryManager)getSystemService(BATTERY_SERVICE);
+        BatteryManager bm = (BatteryManager) getSystemService(BATTERY_SERVICE);
         if (bm != null) {
             int batteryLevel = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
             battery.setText(batteryLevel+"%");
             if (batteryLevel > 90){
-                Score += 10;
+                Score += 20;
             } else if (batteryLevel > 75){
-                Score += 8;
+                Score += 16;
             } else if (batteryLevel > 50){
-                Score += 6;
+                Score += 12;
             } else if (batteryLevel > 25){
-                Score += 4;
+                Score += 8;
             } else if (batteryLevel > 10){
-                Score += 2;
+                Score += 4;
             }
         }
         score.setText(Score+" /100");
+        Intent myIntent = new Intent(MainActivity.this, SafeService.class);
+        PendingIntent pendingIntent = PendingIntent.getService(MainActivity.this, 0, myIntent, 0);
+        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        Calendar calendar = Calendar.getInstance();
+        alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis()+900000, pendingIntent);
+
     }
 
     @Override
@@ -213,13 +226,13 @@ public class MainActivity extends AppCompatActivity {
                 JSONObject mainObject = new JSONObject(result);
                 String policeStatus = mainObject.getString("status");
                 if (policeStatus.equals("ZERO_RESULTS")){
-                    Score += 10;
-                    police.setText("NO STATIONS NEAR 5 KMs");
+                    Score += 5;
+                    police.setText("NO STATIONS NEAR 2 KMs");
                     police.setTypeface(null, Typeface.BOLD);
                     police.setTextColor(getResources().getColor(R.color.colorAccent));
                 } else{
                     Score += 20;
-                    police.setText("POLICE STATION IS NEARER");
+                    police.setText("YES, POLICE STATION FOUND");
                     police.setTextColor(getResources().getColor(R.color.colorGreen));
                 }
                 score.setText(Score+" /100");
@@ -272,7 +285,7 @@ public class MainActivity extends AppCompatActivity {
                     Score += 20;
                     threat.setTextColor(getResources().getColor(R.color.colorGreen));
                 } else{
-                    Score += 10;
+                    Score += 5;
                     threat.setText("POSSIBLE (LIQUOR SHOPS)");
                     threat.setTypeface(null, Typeface.BOLD);
                     threat.setTextColor(getResources().getColor(R.color.colorAccent));
