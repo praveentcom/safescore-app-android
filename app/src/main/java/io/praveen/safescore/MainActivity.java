@@ -1,24 +1,132 @@
 package io.praveen.safescore;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Typeface;
+import android.location.Location;
+import android.location.LocationManager;
+import android.os.AsyncTask;
+import android.os.BatteryManager;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
     FirebaseAuth mAuth;
     FirebaseUser mUser;
+    SharedPreferences preferences;
+    double lat1, lon1;
+    TextView name, score, battery, location, police, away, time, ontime, threat, behaviour;
+    int Score = 0;
 
+    @SuppressLint({"SetTextI18n", "MissingPermission"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mAuth = FirebaseAuth.getInstance();
+        preferences = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+        float lat = preferences.getFloat("lat", 0);
+        float lon = preferences.getFloat("lon", 0);
+        int in = preferences.getInt("in", 8);
+        int out = preferences.getInt("out", 18);
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        Location loc = null;
+        if (locationManager != null) {
+            loc = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        }
+        if (loc != null) {
+            lat1 = loc.getLatitude();
+            lon1 = loc.getLongitude();
+        }
+        double distance = distance(lat, lat1, lon, lon1);
+        mUser = mAuth.getCurrentUser();
+        name = findViewById(R.id.main_welcome);
+        score = findViewById(R.id.main_score);
+        battery = findViewById(R.id.main_battery);
+        location = findViewById(R.id.main_location);
+        location.setText(lat1 + ", " + lon1);
+        away = findViewById(R.id.main_away);
+        time = findViewById(R.id.main_time);
+        police = findViewById(R.id.main_police);
+        Calendar c = Calendar.getInstance();
+        SimpleDateFormat df = new SimpleDateFormat("HH:mm | dd/MM/yyyy", Locale.ENGLISH);
+        String formattedDate = df.format(c.getTime());
+        time.setText(formattedDate);
+        DecimalFormat _numberFormat= new DecimalFormat("#0.0");
+        float mDist = Float.parseFloat(_numberFormat.format((float) distance/1000));
+        SimpleDateFormat df2 = new SimpleDateFormat("HH", Locale.ENGLISH);
+        int mTime = Integer.valueOf(df2.format(c.getTime()));
+        ontime = findViewById(R.id.main_ontime);
+        if (mTime > in && mTime < out){
+            ontime.setText("YOU'RE ON TIME");
+            Score += 8;
+            ontime.setTextColor(getResources().getColor(R.color.colorGreen));
+        } else{
+            if (mDist > 5){
+                Score += 4;
+                ontime.setText("NO, PLEASE START TO HOME");
+                ontime.setTypeface(null, Typeface.BOLD);
+                ontime.setTextColor(getResources().getColor(R.color.colorAccent));
+            } else{
+                Score += 10;
+                ontime.setText("YES, YOU ARE ON TIME");
+                ontime.setTextColor(getResources().getColor(R.color.colorGreen));
+            }
+        }
+        new Json().execute("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+lat1+","+lon1+"&radius=5000&type=police&key=AIzaSyCczblqj3aNVsRde-4oin7FnGmyfMpEx3c");
+        threat = findViewById(R.id.main_threat);
+        new Json2().execute("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+lat1+","+lon1+"&radius=5000&type=liquor_store&key=AIzaSyCczblqj3aNVsRde-4oin7FnGmyfMpEx3c");
+        behaviour = findViewById(R.id.main_behaviour);
+        behaviour.setText("NONE");
+        Score += 10;
+        if (mDist > 5) {
+            away.setText("AWAY FROM HOME BY " + mDist + " KMs");
+            away.setTypeface(null, Typeface.BOLD);
+        } else{
+            away.setText("AWAY FROM HOME BY " + mDist + " KMs");
+            away.setTextColor(getResources().getColor(R.color.colorGreen));
+        }
+        name.setText("Welcome " + mUser.getDisplayName() +",\nYour SafeScore is");
+        BatteryManager bm = (BatteryManager)getSystemService(BATTERY_SERVICE);
+        if (bm != null) {
+            int batteryLevel = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+            battery.setText(batteryLevel+"%");
+            if (batteryLevel > 90){
+                Score += 10;
+            } else if (batteryLevel > 75){
+                Score += 8;
+            } else if (batteryLevel > 50){
+                Score += 6;
+            } else if (batteryLevel > 25){
+                Score += 4;
+            } else if (batteryLevel > 10){
+                Score += 2;
+            }
+        }
+        score.setText(Score+" /100");
     }
 
     @Override
@@ -48,5 +156,130 @@ public class MainActivity extends AppCompatActivity {
             finish();
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    public static double distance(double lat1, double lat2, double lon1, double lon2) {
+        final int R = 6371;
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        double distance = R * c * 1000;
+        distance = Math.pow(distance, 2) + Math.pow(0, 2);
+        distance = Math.sqrt(distance);
+        return distance;
+    }
+
+    private class Json extends AsyncTask<String, String, String> {
+
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        protected String doInBackground(String... params) {
+            HttpURLConnection connection = null;
+            BufferedReader reader = null;
+
+            try {
+                URL url = new URL(params[0]);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+                InputStream stream = connection.getInputStream();
+                reader = new BufferedReader(new InputStreamReader(stream));
+                StringBuffer buffer = new StringBuffer();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line+"\n");
+                }
+                return buffer.toString();
+            } catch (IOException ignored) {} finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+                try {
+                    if (reader != null) {
+                        reader.close();
+                    }
+                } catch (IOException ignored) {}
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            try {
+                JSONObject mainObject = new JSONObject(result);
+                String policeStatus = mainObject.getString("status");
+                if (policeStatus.equals("ZERO_RESULTS")){
+                    Score += 10;
+                    police.setText("NO STATIONS NEAR 5 KMs");
+                    police.setTypeface(null, Typeface.BOLD);
+                    police.setTextColor(getResources().getColor(R.color.colorAccent));
+                } else{
+                    Score += 20;
+                    police.setText("POLICE STATION IS NEARER");
+                    police.setTextColor(getResources().getColor(R.color.colorGreen));
+                }
+                score.setText(Score+" /100");
+            } catch (Exception ignored){}
+            super.onPostExecute(result);
+        }
+    }
+    private class Json2 extends AsyncTask<String, String, String> {
+
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        protected String doInBackground(String... params) {
+            HttpURLConnection connection = null;
+            BufferedReader reader = null;
+
+            try {
+                URL url = new URL(params[0]);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+                InputStream stream = connection.getInputStream();
+                reader = new BufferedReader(new InputStreamReader(stream));
+                StringBuffer buffer = new StringBuffer();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line+"\n");
+                }
+                return buffer.toString();
+            } catch (IOException ignored) {} finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+                try {
+                    if (reader != null) {
+                        reader.close();
+                    }
+                } catch (IOException ignored) {}
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            try {
+                JSONObject mainObject = new JSONObject(result);
+                String wineStatus = mainObject.getString("status");
+                if (wineStatus.equals("ZERO_RESULTS")){
+                    threat.setText("NONE/MINIMAL");
+                    Score += 20;
+                    threat.setTextColor(getResources().getColor(R.color.colorGreen));
+                } else{
+                    Score += 10;
+                    threat.setText("POSSIBLE (LIQUOR SHOPS)");
+                    threat.setTypeface(null, Typeface.BOLD);
+                    threat.setTextColor(getResources().getColor(R.color.colorAccent));
+                }
+                score.setText(Score+" /100");
+            } catch (Exception ignored){}
+            super.onPostExecute(result);
+        }
     }
 }

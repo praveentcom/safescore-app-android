@@ -139,7 +139,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="number"
-                android:hint="918838118348"
+                android:hint="8838118348"
+                android:maxLength="10"
                 android:id="@+id/details_emergency_mobile"/>
 
         </LinearLayout>

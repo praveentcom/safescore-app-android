@@ -4,11 +4,13 @@ import android.annotation.SuppressLint;
 import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -40,6 +42,7 @@ public class DetailsActivity extends AppCompatActivity {
     double lat, lon;
     int inh, outh;
     Intent i;
+    SharedPreferences preferences;
 
     @Override
     protected void onStart() {
@@ -54,6 +57,7 @@ public class DetailsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_details);
         mAuth = FirebaseAuth.getInstance();
         mUser = mAuth.getCurrentUser();
+        preferences = PreferenceManager.getDefaultSharedPreferences(DetailsActivity.this);
         final DatabaseReference database = FirebaseDatabase.getInstance().getReference("Users").child(mUser.getEmail().replaceAll("\\.", ",")).child("Common Details");
         i = new Intent(DetailsActivity.this, MainActivity.class);
         name = findViewById(R.id.details_name);
@@ -126,6 +130,12 @@ public class DetailsActivity extends AppCompatActivity {
             public void onClick(View v) {
                 if (check()){
                     next.setText("PLEASE WAIT");
+                    SharedPreferences.Editor editor = preferences.edit();
+                    editor.putFloat("lat", (float) lat);
+                    editor.putFloat("lon", (float) lon);
+                    editor.putInt("in", inh);
+                    editor.putInt("out", outh);
+                    editor.apply();
                     next.setTextColor(getResources().getColor(R.color.colorPrimary));
                     next.setBackgroundTintList(ColorStateList.valueOf(getResources().getColor(R.color.colorPrimaryLight)));
                     UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder().setDisplayName(name.getText().toString()).build();
@@ -194,7 +204,7 @@ public class DetailsActivity extends AppCompatActivity {
             Toast.makeText(DetailsActivity.this, "Enter your emergency contact name!", Toast.LENGTH_SHORT).show();
             return false;
         }
-        if (name.getText().toString().length() == 0){
+        if (name.getText().toString().length() < 10){
             Toast.makeText(DetailsActivity.this, "Enter your emergency contact's number!", Toast.LENGTH_SHORT).show();
             return false;
         }

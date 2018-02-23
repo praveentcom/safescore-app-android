@@ -3,7 +3,9 @@ package io.praveen.safescore;
 import android.*;
 import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -20,6 +22,11 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -30,12 +37,15 @@ public class LoginActivity extends AppCompatActivity {
     ProgressBar pb;
     Intent i1, i2;
     boolean b = false;
+    double lat = 0, lon = 0;
+    SharedPreferences preferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
         mAuth = FirebaseAuth.getInstance();
+        preferences = PreferenceManager.getDefaultSharedPreferences(LoginActivity.this);
         i1 = new Intent(LoginActivity.this, MainActivity.class);
         i2 = new Intent(LoginActivity.this, DetailsActivity.class);
         mEmail = findViewById(R.id.login_email);
@@ -56,12 +66,59 @@ public class LoginActivity extends AppCompatActivity {
                             mAuth.signInWithEmailAndPassword(email, password).addOnCompleteListener(LoginActivity.this, new OnCompleteListener<AuthResult>() {
                                 @Override
                                 public void onComplete(@NonNull Task<AuthResult> task) {
-                                    pb.setVisibility(View.INVISIBLE);
                                     if (task.isSuccessful()){
                                         mUser = mAuth.getCurrentUser();
-                                        startActivity(i1);
-                                        finish();
+                                        final DatabaseReference ref = FirebaseDatabase.getInstance().getReference("Users").child(mUser.getEmail().replaceAll("\\.", ",")).child("Common Details");
+                                        DatabaseReference rLat = ref.child("Latitude");
+                                        final DatabaseReference rIn = ref.child("Time In");
+                                        final DatabaseReference rOut = ref.child("Time Out");
+                                        final SharedPreferences.Editor editor = preferences.edit();
+                                        rLat.addValueEventListener(new ValueEventListener() {
+                                            @Override
+                                            public void onDataChange(DataSnapshot dataSnapshot) {
+                                                lat = dataSnapshot.getValue(Double.class);
+                                                editor.putFloat("lat", (float) lat);
+                                                final DatabaseReference rLon = ref.child("Longitude");
+                                                rLon.addValueEventListener(new ValueEventListener() {
+                                                    @Override
+                                                    public void onDataChange(DataSnapshot dataSnapshot) {
+                                                        lon = dataSnapshot.getValue(Double.class);
+                                                        editor.putFloat("lon", (float) lon);
+                                                        rIn.addValueEventListener(new ValueEventListener() {
+                                                            @Override
+                                                            public void onDataChange(DataSnapshot dataSnapshot) {
+                                                                editor.putInt("in", dataSnapshot.getValue(Integer.class));
+                                                                rOut.addValueEventListener(new ValueEventListener() {
+                                                                    @Override
+                                                                    public void onDataChange(DataSnapshot dataSnapshot) {
+                                                                        editor.putInt("out", dataSnapshot.getValue(Integer.class));
+                                                                        editor.apply();
+                                                                        pb.setVisibility(View.INVISIBLE);
+                                                                        startActivity(i1);
+                                                                        finish();
+                                                                    }
+                                                                    @Override
+                                                                    public void onCancelled(DatabaseError error) {}
+                                                                });
+                                                                editor.apply();
+                                                                pb.setVisibility(View.INVISIBLE);
+                                                                startActivity(i1);
+                                                                finish();
+                                                            }
+                                                            @Override
+                                                            public void onCancelled(DatabaseError error) {}
+                                                        });
+                                                    }
+                                                    @Override
+                                                    public void onCancelled(DatabaseError error) {}
+                                                });
+                                            }
+                                            @Override
+                                            public void onCancelled(DatabaseError error) {}
+
+                                        });
                                     } else{
+                                        pb.setVisibility(View.INVISIBLE);
                                         Toast.makeText(LoginActivity.this, "Check the inputs and try again!", Toast.LENGTH_SHORT).show();
                                     }
                                 }
