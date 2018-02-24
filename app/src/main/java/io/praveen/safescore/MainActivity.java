@@ -9,6 +9,7 @@ import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.location.Location;
 import android.location.LocationManager;
+import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.BatteryManager;
 import android.preference.PreferenceManager;
@@ -17,6 +18,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -40,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
     FirebaseAuth mAuth;
     FirebaseUser mUser;
     SharedPreferences preferences;
+    Button sos, scream;
     double lat1, lon1;
     TextView name, score, battery, location, police, away, time, ontime, threat, behaviour;
     int Score = 0;
@@ -74,6 +78,26 @@ public class MainActivity extends AppCompatActivity {
         away = findViewById(R.id.main_away);
         time = findViewById(R.id.main_time);
         police = findViewById(R.id.main_police);
+        scream = findViewById(R.id.scraem);
+        scream.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final MediaPlayer mp2 = MediaPlayer.create(MainActivity.this, R.raw.siren);
+                mp2.setLooping(true);
+                scream.setText("CLICK AGAIN TO SCREAM OUT LOUD");
+                scream.setOnClickListener(new View.OnClickListener(){
+                    public void onClick(View v) {
+                        if(mp2.isPlaying()) {
+                            mp2.pause();
+                            scream.setText("CLICK TO SCREAM OUT LOUD");
+                        } else {
+                            mp2.start();
+                            scream.setText("CLICK AGAIN TO TURN OFF");
+                        }
+                    }
+                });
+            }
+        });
         Calendar c = Calendar.getInstance();
         SimpleDateFormat df = new SimpleDateFormat("HH:mm | dd/MM/yyyy", Locale.ENGLISH);
         String formattedDate = df.format(c.getTime());
@@ -138,7 +162,9 @@ public class MainActivity extends AppCompatActivity {
         PendingIntent pendingIntent = PendingIntent.getService(MainActivity.this, 0, myIntent, 0);
         AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
         Calendar calendar = Calendar.getInstance();
-        alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis()+900000, pendingIntent);
+        if (alarmManager != null) {
+            alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis()+1000000, pendingIntent);
+        }
 
     }
 
@@ -185,6 +211,7 @@ public class MainActivity extends AppCompatActivity {
         return distance;
     }
 
+    @SuppressLint("StaticFieldLeak")
     private class Json extends AsyncTask<String, String, String> {
 
         protected void onPreExecute() {
@@ -201,10 +228,10 @@ public class MainActivity extends AppCompatActivity {
                 connection.connect();
                 InputStream stream = connection.getInputStream();
                 reader = new BufferedReader(new InputStreamReader(stream));
-                StringBuffer buffer = new StringBuffer();
+                StringBuilder buffer = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    buffer.append(line+"\n");
+                    buffer.append(line).append("\n");
                 }
                 return buffer.toString();
             } catch (IOException ignored) {} finally {
@@ -240,6 +267,7 @@ public class MainActivity extends AppCompatActivity {
             super.onPostExecute(result);
         }
     }
+    @SuppressLint("StaticFieldLeak")
     private class Json2 extends AsyncTask<String, String, String> {
 
         protected void onPreExecute() {
@@ -256,10 +284,10 @@ public class MainActivity extends AppCompatActivity {
                 connection.connect();
                 InputStream stream = connection.getInputStream();
                 reader = new BufferedReader(new InputStreamReader(stream));
-                StringBuffer buffer = new StringBuffer();
+                StringBuilder buffer = new StringBuilder();
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    buffer.append(line+"\n");
+                    buffer.append(line).append("\n");
                 }
                 return buffer.toString();
             } catch (IOException ignored) {} finally {

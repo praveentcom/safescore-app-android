@@ -16,7 +16,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:layout_marginStart="32dp"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="28dp"
             android:layout_marginEnd="32dp"
             android:orientation="vertical">
 
@@ -250,5 +250,22 @@
         </LinearLayout>
 
     </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_alignParentBottom="true"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/scraem"
+            android:text="TAP TWICE TO SCREAM OUT LOUD"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="@color/colorAccent"
+            android:layout_weight="1"/>
+
+    </LinearLayout>
 
 </RelativeLayout>

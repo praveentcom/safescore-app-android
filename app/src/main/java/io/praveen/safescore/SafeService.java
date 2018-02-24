@@ -48,11 +48,6 @@ public class SafeService extends Service implements Runnable {
         details.setScore(score);
         details.setDate(new SimpleDateFormat("HH:mm - dd/MM/yyyy", Locale.ENGLISH).format(Calendar.getInstance().getTime()));
         database.child(recordID).setValue(details);
-        try {
-            Thread.sleep(900000);
-            stopService(new Intent(this, SafeService.class));
-            startService(new Intent(this, SafeService.class));
-        } catch (InterruptedException ignored) {}
     }
 
     @Override
