@@ -25,7 +25,7 @@
                 android:layout_height="120dp"
                 android:layout_gravity="center"
                 android:scaleType="centerCrop"
-                android:src="@drawable/peace" />
+                android:src="@drawable/welcome" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -47,7 +47,7 @@
                 android:layout_marginBottom="32dp"
                 android:layout_gravity="center"
                 android:textColor="@color/colorPrimary"
-                android:text="Your Safe Score"/>
+                android:text="Your TourScore"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -152,40 +152,13 @@
                     android:textStyle="bold"
                     android:paddingEnd="8dp"
                     android:textAlignment="textEnd"
-                    android:text="UNUSUAL BEHAVIOUR"
+                    android:text="THREAT NEARBY"
                     android:layout_weight="1" />
 
                 <TextView
                     android:layout_width="0dp"
                     android:paddingStart="8dp"
-                    android:id="@+id/main_behaviour"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/colorPrimary"
-                    android:layout_weight="1"
-                    android:text="NONE"/>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:orientation="horizontal"
-                android:layout_marginBottom="8dp"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:textColor="#000000"
-                    android:textStyle="bold"
-                    android:paddingEnd="8dp"
-                    android:textAlignment="textEnd"
-                    android:text="ARE YOU ON TIME?"
-                    android:layout_weight="1" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:id="@+id/main_ontime"
-                    android:paddingStart="8dp"
+                    android:id="@+id/main_threat"
                     android:layout_height="wrap_content"
                     android:textColor="@color/colorPrimary"
                     android:layout_weight="1"
@@ -206,13 +179,13 @@
                     android:textStyle="bold"
                     android:paddingEnd="8dp"
                     android:textAlignment="textEnd"
-                    android:text="THREAT NEARBY"
+                    android:text="TOURISM SPOT"
                     android:layout_weight="1" />
 
                 <TextView
                     android:layout_width="0dp"
                     android:paddingStart="8dp"
-                    android:id="@+id/main_threat"
+                    android:id="@+id/main_tour"
                     android:layout_height="wrap_content"
                     android:textColor="@color/colorPrimary"
                     android:layout_weight="1"

@@ -10,6 +10,7 @@ import android.graphics.Typeface;
 import android.location.Location;
 import android.location.LocationManager;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.BatteryManager;
 import android.preference.PreferenceManager;
@@ -25,6 +26,7 @@ import android.widget.TextView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -43,9 +45,9 @@ public class MainActivity extends AppCompatActivity {
     FirebaseAuth mAuth;
     FirebaseUser mUser;
     SharedPreferences preferences;
-    Button sos, scream;
+    Button scream;
     double lat1, lon1;
-    TextView name, score, battery, location, police, away, time, ontime, threat, behaviour;
+    TextView name, score, battery, location, police, away, time, tour, threat;
     int Score = 0;
 
     @SuppressLint({"SetTextI18n", "MissingPermission"})
@@ -57,8 +59,6 @@ public class MainActivity extends AppCompatActivity {
         preferences = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
         float lat = preferences.getFloat("lat", 0);
         float lon = preferences.getFloat("lon", 0);
-        int in = preferences.getInt("in", 8);
-        int out = preferences.getInt("out", 18);
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         Location loc = null;
         if (locationManager != null) {
@@ -82,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
         scream.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final MediaPlayer mp2 = MediaPlayer.create(MainActivity.this, R.raw.siren);
+                final MediaPlayer mp2 = MediaPlayer.create(MainActivity.this, R.raw.raw);
                 mp2.setLooping(true);
                 scream.setText("CLICK AGAIN TO SCREAM OUT LOUD");
                 scream.setOnClickListener(new View.OnClickListener(){
@@ -104,31 +104,11 @@ public class MainActivity extends AppCompatActivity {
         time.setText(formattedDate);
         DecimalFormat _numberFormat= new DecimalFormat("#0.0");
         float mDist = Float.parseFloat(_numberFormat.format((float) distance/1000));
-        SimpleDateFormat df2 = new SimpleDateFormat("HH", Locale.ENGLISH);
-        int mTime = Integer.valueOf(df2.format(c.getTime()));
-        ontime = findViewById(R.id.main_ontime);
-        if (mTime > in && mTime < out){
-            ontime.setText("YOU'RE ON TIME");
-            Score += 10;
-            ontime.setTextColor(getResources().getColor(R.color.colorGreen));
-        } else{
-            if (mDist > 5){
-                Score += 5;
-                ontime.setText("NO, PLEASE START TO HOME");
-                ontime.setTypeface(null, Typeface.BOLD);
-                ontime.setTextColor(getResources().getColor(R.color.colorAccent));
-            } else{
-                Score += 20;
-                ontime.setText("YES, YOU ARE ON TIME");
-                ontime.setTextColor(getResources().getColor(R.color.colorGreen));
-            }
-        }
-        new Json().execute("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+lat1+","+lon1+"&radius=2000&type=police&key=AIzaSyCczblqj3aNVsRde-4oin7FnGmyfMpEx3c");
+        tour = findViewById(R.id.main_tour);
         threat = findViewById(R.id.main_threat);
-        new Json2().execute("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+lat1+","+lon1+"&radius=2000&type=liquor_store&key=AIzaSyCczblqj3aNVsRde-4oin7FnGmyfMpEx3c");
-        behaviour = findViewById(R.id.main_behaviour);
-        behaviour.setText("NONE");
-        behaviour.setTextColor(getResources().getColor(R.color.colorGreen));
+        new Json3().execute("https://maps.googleapis.com/maps/api/place/textsearch/json?location="+lat1+","+lon1+"&radius=10000&query=fort&key=AIzaSyCczblqj3aNVsRde-4oin7FnGmyfMpEx3c");
+        new Json().execute("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+lat1+","+lon1+"&radius=2000&type=police&key=AIzaSyCczblqj3aNVsRde-4oin7FnGmyfMpEx3c");
+        new Json2().execute("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location="+lat1+","+lon1+"&radius=20000&type=liquor_store&key=AIzaSyCczblqj3aNVsRde-4oin7FnGmyfMpEx3c");
         Score += 20;
         if (mDist > 5) {
             away.setText("AWAY FROM HOME BY " + mDist + " KMs");
@@ -140,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
             away.setText("SWEET, YOU ARE NEAR YOUR HOME!");
             away.setTextColor(getResources().getColor(R.color.colorGreen));
         }
-        name.setText("Welcome " + mUser.getDisplayName() +",\nYour SafeScore is");
+        name.setText("Welcome " + mUser.getDisplayName() +",\nYour TourScore is");
         BatteryManager bm = (BatteryManager) getSystemService(BATTERY_SERVICE);
         if (bm != null) {
             int batteryLevel = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
@@ -258,8 +238,23 @@ public class MainActivity extends AppCompatActivity {
                     police.setTypeface(null, Typeface.BOLD);
                     police.setTextColor(getResources().getColor(R.color.colorAccent));
                 } else{
+                    JSONArray res = mainObject.getJSONArray("results");
+                    JSONObject obj = res.getJSONObject(0);
                     Score += 20;
-                    police.setText("YES, POLICE STATION FOUND");
+                    final JSONObject lo = obj.getJSONObject("geometry");
+                    JSONObject geo = lo.getJSONObject("location");
+                    final String lat = geo.getString("lat");
+                    final String lng = geo.getString("lng");
+                    final String loc = obj.getString("name");
+                    police.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            String geoUri = "http://maps.google.com/maps?q=loc:" + lat + "," + lng + " (" + loc + ")";
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(geoUri));
+                            startActivity(intent);
+                        }
+                    });
+                    police.setText("YES, STATION FOUND\n("+loc+")");
                     police.setTextColor(getResources().getColor(R.color.colorGreen));
                 }
                 score.setText(Score+" /100");
@@ -267,6 +262,81 @@ public class MainActivity extends AppCompatActivity {
             super.onPostExecute(result);
         }
     }
+
+    @SuppressLint("StaticFieldLeak")
+    private class Json3 extends AsyncTask<String, String, String> {
+
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        protected String doInBackground(String... params) {
+            HttpURLConnection connection = null;
+            BufferedReader reader = null;
+
+            try {
+                URL url = new URL(params[0]);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+                InputStream stream = connection.getInputStream();
+                reader = new BufferedReader(new InputStreamReader(stream));
+                StringBuilder buffer = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line).append("\n");
+                }
+                return buffer.toString();
+            } catch (IOException ignored) {} finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+                try {
+                    if (reader != null) {
+                        reader.close();
+                    }
+                } catch (IOException ignored) {}
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            try {
+                JSONObject mainObject = new JSONObject(result);
+                String policeStatus = mainObject.getString("status");
+                if (policeStatus.equals("ZERO_RESULTS")){
+                    Score += 5;
+                    tour.setText("NO SPOTS NEAR 10 KMS");
+                    tour.setTypeface(null, Typeface.BOLD);
+                    tour.setTextColor(getResources().getColor(R.color.colorAccent));
+                } else{
+                    JSONArray res = mainObject.getJSONArray("results");
+                    JSONObject obj = res.getJSONObject(0);
+                    Score += 20;
+                    final JSONObject lo = obj.getJSONObject("geometry");
+                    JSONObject geo = lo.getJSONObject("location");
+                    final String lat = geo.getString("lat");
+                    final String lng = geo.getString("lng");
+                    final String loc = obj.getString("name");
+                    tour.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            String geoUri = "http://maps.google.com/maps?q=loc:" + lat + "," + lng + " (" + loc + ")";
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(geoUri));
+                            startActivity(intent);
+                        }
+                    });
+                    tour.setTypeface(null, Typeface.BOLD);
+                    tour.setText(loc.toUpperCase());
+                    tour.setTextColor(getResources().getColor(R.color.colorGreen));
+                }
+                score.setText(Score+" /100");
+            } catch (Exception ignored){}
+            super.onPostExecute(result);
+        }
+    }
+
+
     @SuppressLint("StaticFieldLeak")
     private class Json2 extends AsyncTask<String, String, String> {
 
@@ -314,7 +384,22 @@ public class MainActivity extends AppCompatActivity {
                     threat.setTextColor(getResources().getColor(R.color.colorGreen));
                 } else{
                     Score += 5;
-                    threat.setText("POSSIBLE (LIQUOR SHOPS)");
+                    JSONArray res = mainObject.getJSONArray("results");
+                    JSONObject obj = res.getJSONObject(0);
+                    final JSONObject lo = obj.getJSONObject("geometry");
+                    JSONObject geo = lo.getJSONObject("location");
+                    final String lat = geo.getString("lat");
+                    final String lng = geo.getString("lng");
+                    final String loc = obj.getString("name");
+                    threat.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            String geoUri = "http://maps.google.com/maps?q=loc:" + lat + "," + lng + " (" + loc + ")";
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(geoUri));
+                            startActivity(intent);
+                        }
+                    });
+                    threat.setText("LIQUOR SHOP\n("+loc+")");
                     threat.setTypeface(null, Typeface.BOLD);
                     threat.setTextColor(getResources().getColor(R.color.colorAccent));
                 }
